@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f5f1">
+  <title>RoomRoute — find your room</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #202d2b;
+      --muted: #75817c;
+      --line: #e6e9e3;
+      --paper: #fff;
+      --canvas: #f6f5f1;
+      --green: #176c56;
+      --green-soft: #e5f2e9;
+      --orange: #f2a75a;
+      --shadow: 0 14px 40px rgba(37, 53, 46, .07);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font: 15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, select { font: inherit; }
+    button { cursor: pointer; }
+    .shell { max-width: 1320px; margin: auto; padding: 0 38px 42px; }
+    header {
+      height: 82px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #e8e8e2;
+    }
+    .brand { display: flex; align-items: center; gap: 11px; font-size: 17px; font-weight: 750; letter-spacing: -.5px; }
+    .brand-icon { width: 34px; height: 34px; border-radius: 11px; background: var(--green); display: grid; place-items: center; color: white; }
+    .brand-icon svg { width: 19px; height: 19px; }
+    .header-right { display: flex; align-items: center; gap: 20px; color: var(--muted); font-size: 13px; }
+    .open-pill { display: flex; align-items: center; gap: 8px; }
+    .open-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #59a879; }
+    .avatar { width: 34px; height: 34px; border-radius: 50%; background: #e6d5c7; display: grid; place-items: center; color: #745947; font-size: 12px; font-weight: 700; }
+    main { padding-top: 38px; }
+    .eyebrow { color: var(--green); text-transform: uppercase; letter-spacing: 1.7px; font-size: 10px; font-weight: 800; }
+    h1 { margin: 9px 0 5px; font-size: clamp(29px, 4vw, 39px); letter-spacing: -1.6px; line-height: 1.13; }
+    .intro { margin: 0; color: var(--muted); font-size: 14px; }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(320px, .85fr); gap: 22px; margin-top: 27px; align-items: start; }
+    .card { border: 1px solid var(--line); background: var(--paper); border-radius: 17px; box-shadow: var(--shadow); overflow: hidden; }
+    .map-head { min-height: 68px; padding: 17px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); }
+    .map-title { font-weight: 720; font-size: 14px; }
+    .map-subtitle { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .floor-label { color: var(--muted); border: 1px solid var(--line); background: #fff; padding: 8px 11px; border-radius: 9px; font-size: 11px; }
+    .map-wrap { position: relative; padding: 22px; background: #fcfcfa; }
+    .map-canvas { width: 100%; min-height: 390px; border: 1px solid #edf0eb; border-radius: 12px; display: block; background: #f8f9f6; }
+    .map-legend { padding: 0 20px 17px; display: flex; gap: 19px; align-items: center; color: var(--muted); font-size: 11px; }
+    .legend-item { display: flex; gap: 7px; align-items: center; }
+    .legend-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
+    .legend-line { height: 3px; width: 17px; background: var(--green); border-radius: 3px; }
+    .legend-room { height: 10px; width: 13px; border: 1.5px solid #a8b2ab; border-radius: 2px; }
+    .side { display: grid; gap: 16px; }
+    .destination-card { padding: 20px; }
+    .section-title { font-size: 14px; font-weight: 720; }
+    .section-note { color: var(--muted); font-size: 12px; margin-top: 3px; }
+    .field-label { display: block; margin: 19px 0 7px; font-size: 11px; font-weight: 700; color: #65736d; }
+    select.full { width: 100%; padding: 11px 12px; border-radius: 9px; border: 1px solid var(--line); color: var(--ink); background: white; }
+    .route-details { margin-top: 17px; padding: 14px; background: #f4f7f3; border-radius: 11px; }
+    .route-top { display: flex; justify-content: space-between; align-items: center; }
+    .route-destination { font-weight: 720; font-size: 13px; }
+    .route-time { color: var(--green); font-weight: 750; font-size: 12px; }
+    .route-summary { color: var(--muted); font-size: 11px; margin-top: 4px; }
+    .steps { display: grid; gap: 13px; margin-top: 15px; }
+    .step { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; }
+    .step-icon { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid #dce8df; color: var(--green); border-radius: 8px; background: white; font-size: 13px; font-weight: 700; }
+    .step-copy { font-size: 12px; padding-top: 3px; }
+    .step-copy small { display: block; color: var(--muted); margin-top: 2px; font-size: 10px; }
+    .scan-card { padding: 18px; }
+    .scan-top { display: flex; justify-content: space-between; align-items: center; }
+    .ai-badge { display: flex; gap: 5px; align-items: center; padding: 5px 8px; border-radius: 20px; background: #eef5ef; color: var(--green); font-size: 10px; font-weight: 750; }
+    .camera-box { margin-top: 14px; height: 165px; position: relative; border-radius: 11px; background: #182522; overflow: hidden; display: grid; place-items: center; }
+    video { width: 100%; height: 100%; object-fit: cover; display: none; }
+    .camera-placeholder { text-align: center; color: white; padding: 12px; }
+    .camera-placeholder svg { width: 30px; height: 30px; color: #91c6a5; }
+    .camera-placeholder strong { display: block; font-size: 12px; margin-top: 6px; }
+    .camera-placeholder span { display: block; color: #c2d0c9; font-size: 10px; margin-top: 3px; }
+    .scan-frame { position: absolute; inset: 21px 45px; border: 1px solid rgba(230,255,239,.75); border-radius: 8px; pointer-events: none; }
+    .scan-frame::after { content: ""; position: absolute; left: 10%; right: 10%; top: 50%; height: 1px; background: rgba(151,227,174,.8); box-shadow: 0 0 9px #62d387; }
+    .camera-status { min-height: 25px; padding-top: 8px; color: var(--muted); font-size: 10px; }
+    .button-row { display: flex; gap: 8px; }
+    .button { min-height: 39px; border-radius: 9px; padding: 0 12px; border: 1px solid var(--line); background: white; color: var(--ink); font-size: 11px; font-weight: 700; }
+    .button.primary { background: var(--green); color: white; border-color: var(--green); flex: 1; }
+    .button:disabled { cursor: wait; opacity: .65; }
+    .demo-tip { margin-top: 11px; background: #fcf7ed; border-radius: 8px; padding: 9px 10px; color: #7a6240; font-size: 10px; }
+    .demo-tip b { font-weight: 750; }
+    .print-button { border: 0; background: transparent; color: var(--green); text-decoration: underline; text-underline-offset: 2px; font-size: 10px; padding: 0; }
+    .print-cards { display: none; }
+    .header-right { gap: 10px; }
+    .admin-open { border: 1px solid var(--line); background: white; color: var(--green); border-radius: 9px; padding: 8px 11px; font-size: 11px; font-weight: 700; }
+    .map-tools { display: flex; align-items: center; gap: 8px; }
+    .admin-dialog { width: min(720px, calc(100% - 28px)); max-height: min(90vh, 850px); border: 1px solid var(--line); border-radius: 17px; padding: 0; color: var(--ink); box-shadow: 0 24px 80px #172c2460; overflow-y: auto; }
+    .admin-dialog::backdrop { background: #17241f88; backdrop-filter: blur(3px); }
+    .admin-content { padding: 22px; }
+    .admin-heading { display: flex; justify-content: space-between; align-items: start; gap: 15px; }
+    .admin-heading h2 { margin: 0; font-size: 21px; letter-spacing: -.5px; }
+    .admin-heading p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+    .admin-close { border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--ink); width: 34px; height: 34px; }
+    .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-top: 18px; }
+    .admin-grid .wide { grid-column: 1 / -1; }
+    .admin-field label { display: block; font-size: 10px; font-weight: 750; color: #65736d; margin-bottom: 5px; }
+    .admin-field input, .admin-field select { width: 100%; min-height: 39px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: white; color: var(--ink); font: inherit; font-size: 12px; }
+    .admin-hint { background: #fcf7ed; border-radius: 9px; padding: 10px 12px; color: #7a6240; font-size: 11px; }
+    .locations-list { max-height: 155px; overflow: auto; border: 1px solid var(--line); border-radius: 9px; }
+    .location-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 11px; }
+    .location-row:last-child { border-bottom: 0; }
+    .location-meta { color: var(--muted); font-size: 10px; }
+    .remove-location { border: 0; background: transparent; color: #a14436; font-size: 10px; }
+    .admin-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 15px; }
+    .small-status { min-height: 15px; font-size: 10px; color: var(--muted); margin-top: 5px; }
+    .public-results { max-height: 180px; overflow-y: auto; display: grid; gap: 6px; }
+    .public-result { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 11px; }
+    .public-result small { display: block; color: var(--muted); font-size: 9px; }
+    .public-result button { flex: none; border: 1px solid var(--line); background: white; color: var(--green); border-radius: 7px; padding: 6px 8px; font-size: 10px; font-weight: 700; }
+    .quick-map { margin-top: 16px; padding: 16px; border: 1px solid #dce8df; border-radius: 12px; background: #f7faf6; }
+    .quick-map > p { margin: 4px 0 12px; color: var(--muted); font-size: 11px; }
+    .quick-map input { width: 100%; padding: 10px; border: 1px dashed #9bb9a5; border-radius: 9px; background: white; font-size: 12px; }
+    .walkthrough-preview { margin: 8px 0 12px; padding-left: 23px; color: var(--ink); font-size: 11px; }
+    .walkthrough-preview li { display: flex; align-items: center; gap: 8px; margin: 5px 0; }
+    .walkthrough-preview input { min-width: 0; flex: 1; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; font: inherit; }
+    .sign-label-candidates { display: grid; gap: 7px; max-height: 220px; overflow: auto; margin: 10px 0; }
+    .sign-label-option { display: flex; align-items: center; gap: 11px; min-height: 48px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; background: white; font-size: 12px; overflow-wrap: anywhere; cursor: pointer; }
+    .sign-label-option:has(input:checked) { border-color: var(--green); background: #f0f7f1; }
+    .sign-label-option input { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--green); }
+    .sign-label-option span { display: grid; gap: 2px; }
+    .sign-label-option strong { color: var(--ink); font-size: 13px; }
+    .sign-label-option small { color: var(--muted); font-size: 10px; }
+    .admin-advanced { margin-top: 13px; border-top: 1px solid var(--line); padding-top: 12px; }
+    .admin-advanced summary { color: var(--green); cursor: pointer; font-size: 11px; font-weight: 700; }
+    .camera-controls { display: flex; gap: 8px; }
+    .camera-controls .primary { flex: 1; }
+    .toast { position: fixed; left: 50%; bottom: 25px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; transition: .2s; color: white; background: #23352f; border-radius: 10px; padding: 12px 17px; font-size: 12px; box-shadow: var(--shadow); z-index: 3; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .route-animate { stroke-dasharray: 9 7; animation: dash 1.3s linear infinite; }
+    @keyframes dash { to { stroke-dashoffset: -32; } }
+    @media print {
+      body * { visibility: hidden !important; }
+      .print-cards, .print-cards * { visibility: visible !important; }
+      .print-cards { display: grid !important; position: absolute; inset: 0; padding: 20px; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+      .print-card { min-height: 170px; border: 2px solid #176c56; border-radius: 12px; padding: 20px; display: grid; place-items: center; text-align: center; color: #176c56; break-inside: avoid; }
+      .print-card strong { font-size: 21px; }
+      .print-card span { font-size: 12px; letter-spacing: 2px; }
+      .print-card small { font-size: 10px; color: #75817c; }
+    }
+    @media (max-width: 850px) {
+      .shell { padding: 0 19px 28px; }
+      .workspace { grid-template-columns: 1fr; }
+      .map-canvas { min-height: 340px; }
+      .header-right { gap: 12px; }
+    }
+    @media (max-width: 480px) {
+      .shell { padding: 0 13px 23px; }
+      header { height: 67px; }
+      main { padding-top: 27px; }
+      .open-pill { display: none; }
+      .map-wrap { padding: 10px; }
+      .map-canvas { min-height: 285px; }
+    }
+    @media (max-width: 500px) {
+      .admin-grid { grid-template-columns: 1fr; }
+      .admin-grid .wide { grid-column: auto; }
+      .admin-content { padding: 16px; }
+      .header-right .open-pill { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 20V8l8-5 8 5v12h-6v-7h-4v7H4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9h.01M15 9h.01" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </div>
+        RoomRoute
+      </div>
+      <div class="header-right"><span class="open-pill">Maths &amp; Computer Science · Pilot</span><button class="admin-open" id="openAdmin">Building admin</button><span class="avatar">MP</span></div>
+    </header>
+    <main>
+      <div class="eyebrow">Maths &amp; Computer Science · Indoor navigation pilot</div>
+      <h1>Find your room in the MCS building.</h1>
+      <p class="intro">Choose a destination. Follow a route built from building landmarks.</p>
+      <div class="workspace">
+        <section class="card" aria-label="Interactive building map">
+          <div class="map-head">
+            <div><div class="map-title" id="buildingTitle">Maths &amp; Computer Science Building</div><div class="map-subtitle" id="mapSubtitle">Example route only · verify building locations on site</div></div>
+            <div class="map-tools"><select class="floor-label" id="buildingSelect" aria-label="Select building"></select><button class="button" id="locateButton" title="Use your phone's GPS to identify this building">Locate me</button></div>
+          </div>
+          <div class="map-wrap">
+            <svg id="map" class="map-canvas" viewBox="0 0 700 410" role="img" aria-label="Ground floor map showing your route"></svg>
+          </div>
+          <div class="map-legend">
+            <span class="legend-item"><span class="legend-dot"></span>You are here</span>
+            <span class="legend-item"><span class="legend-line"></span>Your route</span>
+            <span class="legend-item"><span class="legend-room"></span>Room</span>
+          </div>
+        </section>
+        <aside class="side">
+          <section class="card destination-card">
+            <div class="section-title">Where do you need to go?</div>
+            <div class="section-note">Choose your destination to plan a route.</div>
+            <label class="field-label" for="destination">DESTINATION</label>
+            <select class="full" id="destination" aria-label="Destination"></select>
+            <div class="route-details">
+              <div class="route-top"><span class="route-destination" id="routeDestination">Lecture Theatre 1</span><span class="route-time" id="routeTime">2 min · 85 m</span></div>
+              <div class="route-summary" id="routeSummary">From Main Entrance · via Central Hall</div>
+              <div class="steps" id="steps"></div>
+            </div>
+          </section>
+          <section class="card scan-card">
+            <div class="scan-top"><div class="section-title">Find your position</div><span class="ai-badge"><span>✦</span> CAMERA NEURAL OCR</span></div>
+            <div class="camera-box">
+              <video id="camera" autoplay playsinline muted></video>
+              <div class="camera-placeholder" id="cameraPlaceholder">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h2l1.2-1.5h6.6L16.5 6h2A1.5 1.5 0 0 1 20 7.5v10a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-10Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12.5" r="3.2" stroke="currentColor" stroke-width="1.6"/></svg>
+                <strong>Camera landmark recognition</strong>
+                <span>Scan a mapped room sign or landmark card</span>
+              </div>
+              <div class="scan-frame"></div>
+            </div>
+            <div class="camera-status" id="cameraStatus" aria-live="polite">Landmark recognition is ready to try.</div>
+            <div class="camera-controls">
+              <button class="button primary" id="cameraButton">Start camera</button>
+              <button class="button" id="scanButton" hidden>Scan landmark</button>
+              <button class="button" id="cameraOffButton" hidden>Turn camera off</button>
+              <button class="button" id="demoButton" title="Simulate recognising a nearby landmark">Demo scan</button>
+            </div>
+            <div class="demo-tip"><b>GPS is approximate indoors:</b> it can identify a mapped building, but not a room or floor. Camera landmark scans are optional for updating your indoor position. GPS is checked only when you tap Locate me. <button class="print-button" id="printCards">Print landmark cards</button></div>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+  <section class="print-cards" id="printCardsContainer" aria-hidden="true"></section>
+  <dialog class="admin-dialog" id="adminDialog">
+    <div class="admin-content">
+      <div class="admin-heading">
+        <div><h2>Map the MCS building</h2><p>Upload one walkthrough; RoomRoute will draft a route from readable signs.</p></div>
+        <button class="admin-close" id="closeAdmin" aria-label="Close">✕</button>
+      </div>
+      <section class="quick-map" aria-labelledby="walkthroughHeading">
+        <div class="section-title" id="walkthroughHeading">Quick setup · one walkthrough video</div>
+        <p>Walk from an entrance and briefly point at room signs. We’ll detect sign text, order stops by video, and sketch a connected route. No room names, coordinates, or links to type.</p>
+        <div class="admin-hint wide"><b>Privacy:</b> The app processes video locally; it does not send or save the footage. OCR text is used temporarily to suggest stop names, not stored wholesale. Edit or remove suggestions that contain personal information; only names you confirm and route points are saved. Avoid filming people where possible. OCR code/model files may be downloaded from the script provider.</div>
+        <label class="admin-field"><span class="section-title">Choose a video (max 50 MB)</span><input id="walkthroughVideo" type="file" accept="video/*"></label>
+        <div class="small-status" id="walkthroughStatus" aria-live="polite">The video is processed in this browser. Only names you confirm and route points are saved.</div>
+        <ol class="walkthrough-preview" id="walkthroughPreview"></ol>
+        <button class="button primary" id="addWalkthroughStops" type="button" disabled>Add detected stops to the map</button>
+        <div class="small-status">Review, edit, or remove each suggestion before adding. Stop order follows the video; distances and map positions are estimates, not a measured floor plan.</div>
+      </section>
+      <section class="quick-map" aria-labelledby="teachSignsHeading">
+        <div class="section-title" id="teachSignsHeading">Teach camera recognition with sign photos</div>
+        <p>Choose a mapped stop and upload a sharp, close-up sign photo. The app enlarges it and tries contrast and black-and-white versions; select the clearly shown wording below. Camera scans and walkthroughs can then match that sign to this stop.</p>
+        <div class="admin-hint wide"><b>Privacy:</b> Photos are read locally and discarded. OCR suggestions start unchecked; only text you select or type and save is kept. Don’t select people’s names or other personal information.</div>
+        <label class="admin-field"><span class="section-title">Which mapped stop is shown?</span><select id="signStopSelect"></select></label>
+        <label class="admin-field"><span class="section-title">Sign photos (up to 10, max 50 MB total)</span><input id="signLabelPhotos" type="file" accept="image/*" multiple></label>
+        <div class="small-status" id="signLabelStatus" aria-live="polite">Upload sign photos to see OCR suggestions. Select the matching text, or type it below if OCR misses it.</div>
+        <div class="sign-label-candidates" id="signLabelCandidates"></div>
+        <label class="admin-field"><span class="section-title">If no text is suggested, type the wording from the sign</span><input id="signLabelManual" maxlength="80" placeholder="e.g. MCS 201"></label>
+        <button class="button primary" id="saveSignLabels" type="button" disabled>Save sign labels for this stop</button>
+      </section>
+      <details class="admin-advanced">
+        <summary>Add another building</summary>
+        <form id="buildingForm">
+          <div class="admin-grid">
+            <div class="admin-field"><label for="newBuildingName">BUILDING NAME</label><input id="newBuildingName" placeholder="e.g. Library" required maxlength="60"></div>
+            <button class="button primary" type="submit" style="align-self:end">Add building</button>
+          </div>
+        </form>
+      </details>
+      <details class="admin-advanced">
+        <summary>Optional · GPS pin and public map lookup</summary>
+        <div class="admin-hint wide"><b>Building GPS pin:</b> Save an approximate GPS location while at the building. GPS can identify the building, not a room or floor. The pin is stored in this browser; when you request a public map lookup, approximate coordinates are sent to the OpenStreetMap Overpass service.</div>
+        <div class="admin-actions"><button class="button" id="setBuildingGps" type="button">Set building GPS pin here</button></div>
+        <div class="admin-grid">
+          <div class="admin-hint wide">Look for public OpenStreetMap building features near the saved GPS pin. Import results are suggestions; review and connect them before navigation. Indoor room data may not be mapped. © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a>.</div>
+          <div class="wide button-row"><button class="button" id="importOsm" type="button">Find public map data near this building</button><span class="small-status" id="osmStatus" aria-live="polite"></span></div>
+          <div class="public-results wide" id="osmResults"></div>
+        </div>
+      </details>
+      <div class="admin-field wide"><div class="section-title">Mapped locations</div><div class="locations-list" id="locationsList"></div></div>
+      <details class="admin-advanced">
+        <summary>Advanced · add a location manually</summary>
+        <div class="admin-grid">
+        <div class="admin-field"><label for="mapLocationName">LOCATION / ROOM NAME</label><input id="mapLocationName" placeholder="e.g. Room 2.14" maxlength="60"></div>
+        <div class="admin-field"><label for="mapLocationType">TYPE</label><select id="mapLocationType"><option value="junction">Corridor / junction</option><option value="room">Room / destination</option><option value="entrance">Entrance</option><option value="lift">Lift / stairs</option></select></div>
+        <div class="admin-field"><label for="connectFrom">CONNECT FROM</label><select id="connectFrom"></select></div>
+        <div class="admin-field"><label for="pathDistance">PATH DISTANCE (METRES)</label><input id="pathDistance" type="number" min="1" max="2000" value="20"></div>
+        <div class="admin-field"><label for="mapLocationX">MAP X POSITION</label><input id="mapLocationX" type="number" min="25" max="675" value="350"></div>
+        <div class="admin-field"><label for="mapLocationY">MAP Y POSITION</label><input id="mapLocationY" type="number" min="25" max="385" value="207"></div>
+        <div class="admin-field wide"><label for="locationMedia">LANDMARK PHOTO OR VIDEO (MAX 50 MB)</label><input id="locationMedia" type="file" accept="image/*,video/*"><div class="small-status" id="mediaStatus">Files are processed locally and immediately discarded. Only recognised text labels are saved.</div></div>
+        <div class="admin-hint wide">Photo and video OCR can match signs to stops you teach in the section above. It does not train a new visual-positioning model. The diagram is a reviewed route sketch, not an automatically reconstructed 3D floor plan.</div>
+        <div class="wide button-row"><button class="button primary" id="pickPosition" type="button">Pick on map</button><button class="button" id="saveAtCoordinates" type="button">Add at coordinates</button></div>
+      </div>
+      <div class="admin-actions"><button class="button" id="cancelAddLocation" type="button">Clear location form</button></div>
+      </details>
+    </div>
+  </dialog>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <script src="app.js?v=sign-reference-5"></script>
+</body>
+</html>
