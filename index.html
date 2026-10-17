@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MCS AR Navigation</title>
+  <!-- A-Frame (WebXR) and Canvas Confetti libraries -->
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, sans-serif; overflow: hidden; }
+    
+    /* 2D UI Overlay */
+    #ui-layer {
+      position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+      z-index: 999; background: rgba(255, 255, 255, 0.95); padding: 20px;
+      border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      display: flex; flex-direction: column; gap: 12px; width: 85%; max-width: 350px;
+    }
+    select, input, button { 
+      padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; width: 100%; box-sizing: border-box; 
+    }
+    button { background: #0066ff; color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    button:active { background: #0044cc; }
+    
+    /* Celebration Banner */
+    #success-banner {
+      position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+      z-index: 1000; background: #28a745; color: white; padding: 15px 30px;
+      border-radius: 30px; font-size: 22px; font-weight: bold; text-align: center;
+      box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4); display: none;
+    }
+  </style>
+</head>
+<body>
+
+<!-- UI Overlay -->
+<div id="success-banner">Destination Reached! 🎉</div>
+
+<div id="ui-layer">
+  <select id="building-select">
+    <option value="mcs">MCS Building (Ground & 1st Floor)</option>
+  </select>
+  <input type="text" id="room-input" placeholder="Enter Room (e.g., 101)" />
+  <button id="start-btn">Start Navigation</button>
+</div>
+
+<!-- WebXR 3D Scene -->
+<a-scene nav-tracker webxr="optionalFeatures: hit-test;">
+  
+  <!-- Load your 3D Model -->
+  <a-assets>
+    <a-asset-item id="building-mesh" src="model.glb"></a-asset-item>
+  </a-assets>
+
+  <!-- Display the MCS Building -->
+  <a-entity gltf-model="#building-mesh" position="0 0 0" scale="1 1 1"></a-entity>
+
+  <!-- Glowing Blue Wayfinding Line (Invisible until started) -->
+  <!-- Hardcoded from origin to a demo room at x:5, z:-10 for the prototype -->
+  <a-entity id="nav-line" line="start: 0 0.1 0; end: 0 0.1 0; color: #0066ff; visible: false"></a-entity>
+
+  <!-- The User's Camera -->
+  <a-camera id="user-camera" position="0 1.6 0">
+    <!-- Semi-transparent blue field of view cone attached to the camera -->
+    <!-- Pointing forward (negative Z axis in WebGL) -->
+    <a-cone color="#0066ff" opacity="0.25" radius-bottom="1.5" radius-top="0" height="4" position="0 0 -2.5" rotation="-90 0 0"></a-cone>
+  </a-camera>
+
+</a-scene>
+
+<script>
+  let isNavigating = false;
+  let hasCelebrated = false;
+
+  // Prototype Destination Coordinates (5 meters right, 10 meters forward)
+  const targetPos = new THREE.Vector3(5, 1.6, -10);
+
+  // UI Button Logic
+  document.getElementById('start-btn').addEventListener('click', () => {
+    const room = document.getElementById('room-input').value;
+    if (!room) {
+      alert('Please enter a room number first.');
+      return;
+    }
+    
+    isNavigating = true;
+    hasCelebrated = false;
+    document.getElementById('start-btn').innerText = "Navigating to Room " + room + "...";
+    document.getElementById('start-btn').style.background = "#28a745";
+    
+    // Draw the 3D line from the user's start position to the target room
+    const navLine = document.getElementById('nav-line');
+    navLine.setAttribute('visible', 'true');
+    navLine.setAttribute('line', `start: 0 0.1 0; end: ${targetPos.x} 0.1 ${targetPos.z}`);
+  });
+
+  // Background Tracker: Calculates distance between your camera and the destination
+  AFRAME.registerComponent('nav-tracker', {
+    tick: function () {
+      if (!isNavigating || hasCelebrated) return;
+
+      const camera = document.getElementById('user-camera').object3D;
+      const currentPos = camera.position;
+      
+      // Calculate distance to target room
+      const distance = currentPos.distanceTo(targetPos);
+
+      // Trigger Confetti if within 1.5 meters
+      if (distance < 1.5) {
+        hasCelebrated = true;
+        document.getElementById('success-banner').style.display = 'block';
+        document.getElementById('nav-line').setAttribute('visible', 'false');
+        
+        // Fire Confetti explosion
+        confetti({
+          particleCount: 200,
+          spread: 160,
+          origin: { y: 0.2 },
+          zIndex: 10000,
+          colors: ['#0066ff', '#ffffff', '#28a745']
+        });
+        
+        // Reset UI after 6 seconds
+        setTimeout(() => {
+            document.getElementById('success-banner').style.display = 'none';
+            document.getElementById('start-btn').innerText = "Start Navigation";
+            document.getElementById('start-btn').style.background = "#0066ff";
+            isNavigating = false;
+        }, 6000);
+      }
+    }
+  });
+</script>
+</body>
+</html>
